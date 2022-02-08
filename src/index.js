@@ -94,6 +94,36 @@ const styles = {
   }
 }
 
+// Flattens all child elements into a single list
+const flatten = (children, flat = []) => {
+  flat = [ ...flat, ...React.Children.toArray(children) ]
+
+  if (children.props && children.props.children) {
+    return flatten(children.props.children, flat)
+  }
+
+  return flat
+}
+
+// Strips all circular references and internal fields
+const simplify = children => {
+  const flat = flatten(children)
+
+  return flat.map(
+    ({
+       key,
+       ref,
+       type,
+       props: {
+         children,
+         ...props
+       }
+     }) => ({
+      key, ref, type, props
+    })
+  )
+}
+
 // missing `module.exports = exports['default'];` with babel6
 // export default React.createClass({
 export default class extends Component {
@@ -225,7 +255,7 @@ export default class extends Component {
     if (this.props.autoplay && !prevProps.autoplay) {
       this.autoplay()
     }
-    if (this.props.children !== prevProps.children) {
+    if (JSON.stringify(simplify(this.props.children)) !== JSON.stringify(simplify(prevProps.children))) {
       if (this.props.loadMinimal && Platform.OS === 'ios') {
         this.setState({ ...this.props, index: this.state.index })
       } else {
